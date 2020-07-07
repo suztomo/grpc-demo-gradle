@@ -1,0 +1,47 @@
+plugins {
+  id 'java-gradle-plugin'
+  id 'maven-publish'
+}
+
+group = 'suztomo'
+version = '0.1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+// This combination generates NoClassDefFoundError: io/grpc/internal/BaseDnsNameResolverProvider
+// https://github.com/grpc/grpc-java/issues/7002
+dependencies {
+  implementation 'io.grpc:grpc-core:1.29.0'
+  implementation 'io.grpc:grpc-api:1.29.0'
+  implementation 'com.google.cloud:google-cloud-logging:1.101.1'
+}
+
+repositories {
+  mavenCentral()
+  mavenLocal()
+}
+
+publishing {
+  publications {
+    maven(MavenPublication) {
+      groupId = 'suztomo'
+      artifactId = 'grpc-demo-gradle'
+      version = version
+
+      from components.java
+    }
+  }
+}
+
+// Separate configuration (class path) for Linkage Checker
+configurations { linkageChecker }
+dependencies {
+  linkageChecker "com.google.cloud.tools:dependencies:1.4.2"
+}
+
+project.task('linkageCheck', type: JavaExec) {
+  dependsOn project.getTasksByName('publishMavenPublicationToMavenLocal', true)
+  classpath = project.configurations.linkageChecker
+  main = 'com.google.cloud.tools.opensource.classpath.LinkageCheckerMain'
+  args '-a', "suztomo:grpc-demo-gradle:$version"
+}
